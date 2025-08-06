@@ -13,9 +13,13 @@ const useQRScanner = (options = {}) => {
     qrbox: { width: 250, height: 250 },
     aspectRatio: 1.0,
     disableFlip: false,
-    // Privilégier la caméra arrière (environnement) pour mobile
+    // Configuration pour mobile - privilégier caméra arrière
+    rememberLastUsedCamera: true,
+    // Configuration caméra optimisée
     videoConstraints: {
-      facingMode: { ideal: "environment" }
+      facingMode: { ideal: "environment" }, // Caméra arrière
+      width: { ideal: 1280 },
+      height: { ideal: 720 }
     },
     ...options
   };
@@ -23,8 +27,12 @@ const useQRScanner = (options = {}) => {
   // Initialiser le scanner
   const startScanning = async (elementId, onScanSuccess, onScanFailure) => {
     try {
+      // Nettoyer d'abord si nécessaire
       if (scannerRef.current) {
+        console.log('🧹 Nettoyage du scanner précédent...');
         await stopScanning();
+        // Attendre un peu pour libérer les ressources
+        await new Promise(resolve => setTimeout(resolve, 500));
       }
 
       setError(null);
@@ -35,11 +43,31 @@ const useQRScanner = (options = {}) => {
         throw new Error('L\'API caméra n\'est pas supportée sur cet appareil');
       }
 
-      // Créer le scanner
+      // Vérifier que l'élément existe
+      const element = document.getElementById(elementId);
+      if (!element) {
+        throw new Error(`Élément ${elementId} non trouvé`);
+      }
+
+      console.log('📷 Création du scanner QR...');
+      
+      // Créer le scanner avec configuration optimisée
       const scanner = new Html5QrcodeScanner(
         elementId,
-        defaultOptions,
-        false // verbose
+        {
+          fps: 10,
+          qrbox: { width: 250, height: 250 },
+          aspectRatio: 1.0,
+          disableFlip: false,
+          rememberLastUsedCamera: true,
+          showTorchButtonIfSupported: true,
+          showZoomSliderIfSupported: true,
+          defaultZoomValueIfSupported: 2,
+          videoConstraints: {
+            facingMode: { ideal: "environment" }
+          }
+        },
+        false // verbose = false
       );
 
       scannerRef.current = scanner;
@@ -82,14 +110,19 @@ const useQRScanner = (options = {}) => {
   const stopScanning = async () => {
     try {
       if (scannerRef.current) {
+        console.log('🛑 Arrêt du scanner...');
+        // Libérer toutes les ressources
         await scannerRef.current.clear();
         scannerRef.current = null;
+        console.log('✅ Scanner arrêté et nettoyé');
       }
       setIsScanning(false);
       setError(null);
     } catch (err) {
       console.error('Erreur lors de l\'arrêt du scanner:', err);
-      setError(err.message);
+      // Forcer le nettoyage même en cas d'erreur
+      scannerRef.current = null;
+      setIsScanning(false);
     }
   };
 
