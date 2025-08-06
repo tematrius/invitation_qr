@@ -1,0 +1,23 @@
+{
+  "name": "qr-events-monorepo",
+  "version": "1.0.0",
+  "description": "QR Events - Système de validation d'invitations",
+  "main": "backend/server.js",
+  "scripts": {
+    "start": "cd backend && npm start",
+    "dev": "cd backend && npm run dev",
+    "install-backend": "cd backend && npm install",
+    "install-frontend": "cd frontend && npm install",
+    "build-frontend": "cd frontend && npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tematrius/invitation_qr.git"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "keywords": ["qr-code", "events", "invitations", "nodejs", "react"],
+  "author": "tematrius",
+  "license": "MIT"
+}
