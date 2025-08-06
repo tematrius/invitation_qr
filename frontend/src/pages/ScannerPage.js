@@ -10,6 +10,32 @@ const ScannerPage = () => {
   const { adminCode } = useParams();
   const navigate = useNavigate();
   
+  // Injecter du CSS pour masquer les éléments indésirables du scanner
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `
+      /* Masquer les éléments indésirables du scanner QR */
+      #qr-scanner-container select,
+      #qr-scanner-container input[type="file"],
+      #qr-scanner-container button:not([class*="torch"]):not([class*="zoom"]),
+      div[id*="html5-qrcode-button-camera-permission"],
+      div[id*="html5-qrcode-button-file-selection"] {
+        display: none !important;
+      }
+      
+      /* Masquer le texte "Select Camera" et "Scan an Image File" */
+      #qr-scanner-container span:contains("Select Camera"),
+      #qr-scanner-container span:contains("Scan an Image File") {
+        display: none !important;
+      }
+    `;
+    document.head.appendChild(style);
+    
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
+  
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [scannerActive, setScannerActive] = useState(false);

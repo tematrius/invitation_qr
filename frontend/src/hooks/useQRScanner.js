@@ -49,24 +49,28 @@ const useQRScanner = (options = {}) => {
         throw new Error(`Élément ${elementId} non trouvé`);
       }
 
-      console.log('📷 Création du scanner QR...');
+      console.log('📷 Création du scanner QR simple...');
       
-      // Créer le scanner avec configuration optimisée
+      // Configuration simplifiée - PAS de UI supplémentaire
+      const config = {
+        fps: 10,
+        qrbox: { width: 250, height: 250 },
+        aspectRatio: 1.0,
+        disableFlip: false,
+        // IMPORTANT: Désactiver tous les éléments UI supplémentaires
+        showTorchButtonIfSupported: false,
+        showZoomSliderIfSupported: false,
+        showCameraSelection: false,
+        // Privilégier caméra arrière
+        videoConstraints: {
+          facingMode: "environment" // Force caméra arrière
+        }
+      };
+
+      // Créer le scanner avec configuration minimale
       const scanner = new Html5QrcodeScanner(
         elementId,
-        {
-          fps: 10,
-          qrbox: { width: 250, height: 250 },
-          aspectRatio: 1.0,
-          disableFlip: false,
-          rememberLastUsedCamera: true,
-          showTorchButtonIfSupported: true,
-          showZoomSliderIfSupported: true,
-          defaultZoomValueIfSupported: 2,
-          videoConstraints: {
-            facingMode: { ideal: "environment" }
-          }
-        },
+        config,
         false // verbose = false
       );
 
@@ -98,6 +102,42 @@ const useQRScanner = (options = {}) => {
 
       // Démarrer le scan
       scanner.render(handleSuccess, handleError);
+
+      // Masquer les éléments UI indésirables après un court délai
+      setTimeout(() => {
+        // Masquer le sélecteur de caméra et l'option d'import de fichier
+        const cameraSelection = document.querySelector('#' + elementId + ' select');
+        const fileInput = document.querySelector('#' + elementId + ' input[type="file"]');
+        const fileButton = document.querySelector('#' + elementId + ' button');
+        
+        if (cameraSelection) {
+          cameraSelection.style.display = 'none';
+          console.log('🙈 Sélecteur de caméra masqué');
+        }
+        
+        if (fileInput) {
+          fileInput.style.display = 'none';
+          console.log('🙈 Input fichier masqué');
+        }
+        
+        // Masquer le bouton "Scan an Image File" s'il existe
+        const buttons = document.querySelectorAll('#' + elementId + ' button');
+        buttons.forEach(button => {
+          if (button.textContent.includes('Scan an Image File') || 
+              button.textContent.includes('Select Camera')) {
+            button.style.display = 'none';
+            console.log('🙈 Bouton indésirable masqué:', button.textContent);
+          }
+        });
+        
+        // Masquer tous les éléments qui ne sont pas la vidéo
+        const allElements = document.querySelectorAll('#' + elementId + ' > *');
+        allElements.forEach(el => {
+          if (!el.querySelector('video') && !el.id.includes('qr-shaded-region')) {
+            el.style.display = 'none';
+          }
+        });
+      }, 1000);
 
     } catch (err) {
       console.error('Erreur lors du démarrage du scanner:', err);
