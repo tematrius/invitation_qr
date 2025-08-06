@@ -23,17 +23,12 @@ const ScannerPage = () => {
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [stats, setStats] = useState({ scanned: 0, errors: 0 });
   
-  const videoRef = useRef(null);
   const audioContextRef = useRef(null);
   // Désactivation temporaire de Socket.IO pour éviter les erreurs
   // const socket = useSocket(adminCode);
   const socket = null;
   
-  const { startScanning, stopScanning, error: scannerError } = useQRScanner({
-    onScanSuccess: handleScanSuccess,
-    onScanError: handleScanError,
-    videoElement: videoRef.current
-  });
+  const { startScanning, stopScanning, error: scannerError } = useQRScanner();
 
   useEffect(() => {
     if (!adminCode) {
@@ -228,17 +223,57 @@ const ScannerPage = () => {
   }
 
   const toggleScanner = async () => {
+    console.log('🔄 Toggle scanner - État actuel:', scannerActive);
+    
     if (scannerActive) {
+      console.log('🛑 Arrêt du scanner');
       stopScanning();
       setScannerActive(false);
     } else {
       try {
-        await startScanning();
+        console.log('🎬 Tentative de démarrage du scanner');
+        
+        // Vérifier les permissions caméra avant de démarrer
+        const permissions = await navigator.permissions.query({ name: 'camera' });
+        console.log('📷 Permissions caméra:', permissions.state);
+        
+        if (permissions.state === 'denied') {
+          throw new Error('Accès à la caméra refusé. Veuillez autoriser l\'accès dans les paramètres du navigateur.');
+        }
+        
+        // Vérifier que l'élément existe
+        const container = document.getElementById('qr-scanner-container');
+        console.log('📦 Container trouvé:', !!container);
+        
+        if (!container) {
+          throw new Error('Container du scanner non trouvé');
+        }
+        
+        // Demander explicitement l'accès à la caméra
+        console.log('🔑 Demande d\'accès à la caméra...');
+        await navigator.mediaDevices.getUserMedia({ video: true });
+        console.log('✅ Accès caméra obtenu');
+        
+        // CORRECTION: Passer les bons paramètres à startScanning
+        console.log('▶️ Démarrage du scanner...');
+        await startScanning('qr-scanner-container', handleScanSuccess, handleScanError);
+        console.log('✅ Scanner démarré avec succès');
+        
         setScannerActive(true);
         toast.success('Scanner activé', { duration: 2000 });
       } catch (error) {
-        console.error('Erreur scanner:', error);
-        toast.error('Impossible d\'accéder à la caméra');
+        console.error('❌ Erreur scanner:', error);
+        
+        // Messages d'erreur plus spécifiques
+        if (error.message.includes('Permission denied') || error.message.includes('NotAllowedError')) {
+          toast.error('Accès à la caméra refusé. Autorisez l\'accès et réessayez.');
+        } else if (error.message.includes('NotFoundError')) {
+          toast.error('Aucune caméra trouvée sur cet appareil.');
+        } else if (error.message.includes('NotSupportedError')) {
+          toast.error('Scanner QR non supporté sur ce navigateur.');
+        } else {
+          toast.error(`Erreur: ${error.message}`);
+        }
       }
     }
   };
@@ -483,19 +518,19 @@ const ScannerPage = () => {
         {/* Zone caméra */}
         <div className="bg-gray-800 rounded-lg overflow-hidden">
           <div className="relative aspect-square max-w-sm mx-auto">
-            <video
-              ref={videoRef}
-              className={`w-full h-full object-cover ${!scannerActive ? 'hidden' : ''}`}
-              autoPlay
-              playsInline
-              muted
-            />
+            {/* Container pour le scanner QR */}
+            <div 
+              id="qr-scanner-container" 
+              className={`w-full h-full ${scannerActive ? 'block' : 'hidden'}`}
+              style={{ minHeight: '300px' }}
+            ></div>
             
             {!scannerActive && (
-              <div className="w-full h-full bg-gray-700 flex items-center justify-center">
+              <div className="w-full h-full bg-gray-700 flex items-center justify-center" style={{ minHeight: '300px' }}>
                 <div className="text-center">
                   <FiCameraOff className="mx-auto h-16 w-16 text-gray-500 mb-4" />
                   <p className="text-gray-400">Caméra désactivée</p>
+                  <p className="text-xs text-gray-500 mt-2">Cliquez sur "Démarrer le scanner" pour activer</p>
                 </div>
               </div>
             )}
@@ -520,6 +555,19 @@ const ScannerPage = () => {
           {scannerError && (
             <div className="p-4 bg-red-900 border-t border-red-700">
               <p className="text-red-300 text-sm text-center">{scannerError}</p>
+              <p className="text-red-400 text-xs text-center mt-2">
+                Vérifiez les autorisations caméra dans votre navigateur
+              </p>
+            </div>
+          )}
+          
+          {/* Zone de debug temporaire */}
+          {process.env.NODE_ENV === 'development' && (
+            <div className="p-2 bg-yellow-900 border-t border-yellow-700">
+              <p className="text-yellow-300 text-xs">
+                Debug: Scanner actif = {scannerActive ? 'OUI' : 'NON'} | 
+                Erreur = {scannerError || 'Aucune'}
+              </p>
             </div>
           )}
         </div>
