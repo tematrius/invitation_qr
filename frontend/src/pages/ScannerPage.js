@@ -132,9 +132,14 @@ const ScannerPage = () => {
 
   async function handleScanSuccess(decodedText) {
     try {
+      console.log('🔍 QR Code scanné:', decodedText);
+      console.log('🔍 AdminCode utilisé:', adminCode);
+      
       const response = await api.post(`/checkin/${adminCode}/validate`, {
         qrToken: decodedText
       });
+      
+      console.log('✅ Réponse serveur:', response.data);
       
       const result = {
         type: 'success',
@@ -161,6 +166,10 @@ const ScannerPage = () => {
       });
       
     } catch (error) {
+      console.error('❌ Erreur lors de la validation:', error);
+      console.error('❌ Détails erreur:', error.response?.data);
+      console.error('❌ Status code:', error.response?.status);
+      
       const result = {
         type: 'error',
         message: error.response?.data?.message || 'Erreur de validation',

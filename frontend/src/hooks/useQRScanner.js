@@ -13,6 +13,10 @@ const useQRScanner = (options = {}) => {
     qrbox: { width: 250, height: 250 },
     aspectRatio: 1.0,
     disableFlip: false,
+    // Privilégier la caméra arrière (environnement) pour mobile
+    videoConstraints: {
+      facingMode: { ideal: "environment" }
+    },
     ...options
   };
 
