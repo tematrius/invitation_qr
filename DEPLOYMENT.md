@@ -1,22 +1,247 @@
-# Guide de déploiement - QREvents
+# Guide de Déploiement - QR Events
+## Stack: Netlify + Railway + MongoDB Atlas
 
-Ce guide détaille les étapes pour déployer le système QREvents en production.
+Ce guide vous accompagne pour déployer votre système de validation d'invitations par QR Code.
+
+## 🎯 Architecture de déploiement
+
+- **Frontend**: Netlify (React build statique)
+- **Backend**: Railway (API Node.js/Express)  
+- **Base de données**: MongoDB Atlas (512MB gratuit)
+- **Code source**: GitHub (déploiement automatique)
 
 ## 📋 Prérequis
 
+- Compte GitHub avec votre code
 - Node.js 16+ installé localement
-- Compte MongoDB Atlas ou instance MongoDB
-- Comptes sur les plateformes de déploiement choisies
-- Git configuré avec votre projet
+- Comptes sur : MongoDB Atlas, Railway, Netlify
 
-## 🗄️ Base de données MongoDB Atlas
+---
 
-### 1. Créer un cluster MongoDB Atlas
+## 1. 🗄️ MongoDB Atlas - Base de données
 
-1. Allez sur [MongoDB Atlas](https://cloud.mongodb.com)
-2. Créez un compte gratuit si nécessaire
-3. Créez un nouveau cluster (M0 gratuit suffisant pour commencer)
-4. Choisissez la région la plus proche de vos utilisateurs
+### Étape 1 : Création du cluster
+1. Allez sur [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)
+2. Créez un compte gratuit
+3. Créez un nouveau cluster :
+   - Choisissez **M0 Sandbox** (gratuit, 512MB)
+   - Région : Europe (eu-west-1) ou plus proche de vos utilisateurs
+   - Nom du cluster : `qr-events-cluster`
+
+### Étape 2 : Configuration sécurité
+1. **Database Access** :
+   - Créez un utilisateur : `qr-admin`
+   - Générez un mot de passe fort (sauvegardez-le !)
+   - Privilèges : `Atlas Admin` ou `Read and write to any database`
+
+2. **Network Access** :
+   - Ajoutez `0.0.0.0/0` (toutes les IPs) pour simplifier
+   - Ou ajoutez les IPs spécifiques de Railway si vous les connaissez
+
+### Étape 3 : Récupération de l'URI
+1. Cliquez sur **Connect** sur votre cluster
+2. Choisissez **Connect your application**
+3. Copiez l'URI de connexion :
+```
+mongodb+srv://<username>:<password>@qr-events-cluster.xxxxx.mongodb.net/qrevents?retryWrites=true&w=majority
+```
+
+---
+
+## 2. 🚂 Railway - Backend API
+
+### Préparation du backend
+
+Créons d'abord les fichiers nécessaires pour le déploiement :
+
+1. **Vérifiez le package.json** (déjà configuré) :
+```json
+{
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  }
+}
+```
+
+2. **Variables d'environnement de production** :
+```env
+NODE_ENV=production
+PORT=5000
+MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/qrevents
+JWT_SECRET=genere-un-secret-ultra-securise-32-caracteres-minimum
+QR_SECRET_KEY=genere-un-autre-secret-ultra-securise-32-caracteres
+CORS_ORIGIN=https://votre-app.netlify.app
+```
+
+### Déploiement sur Railway
+
+1. **Création du projet** :
+   - Allez sur [Railway](https://railway.app)
+   - Connectez-vous avec GitHub
+   - Cliquez sur **"New Project"**
+   - Sélectionnez **"Deploy from GitHub repo"**
+   - Choisissez votre dépôt `invitation_qr`
+
+2. **Configuration automatique** :
+   - Railway détecte automatiquement le Node.js
+   - Il lance `npm install` puis `npm start`
+   - Le port sera automatiquement configuré
+
+3. **Variables d'environnement** :
+   - Dans le dashboard Railway, allez dans **Variables**
+   - Ajoutez une par une :
+   ```
+   NODE_ENV = production
+   MONGODB_URI = mongodb+srv://votre-uri-atlas
+   JWT_SECRET = votre-jwt-secret-32-chars-min
+   QR_SECRET_KEY = votre-qr-secret-32-chars-min
+   CORS_ORIGIN = https://votre-app.netlify.app
+   ```
+
+4. **Déploiement** :
+   - Le déploiement se lance automatiquement
+   - Vous obtiendrez une URL : `https://votre-projet.up.railway.app`
+   - Testez l'API : `https://votre-projet.up.railway.app/api/health`
+
+---
+
+## 3. 🌐 Netlify - Frontend React
+
+### Préparation du frontend
+
+1. **Configuration de build** (fichier `netlify.toml` créé) :
+```toml
+[build]
+  base = "frontend"
+  command = "npm install && npm run build"
+  publish = "build"
+```
+
+2. **Gestion des routes SPA** (fichier `_redirects` créé) :
+```
+/*    /index.html   200
+```
+
+### Déploiement sur Netlify
+
+1. **Création du site** :
+   - Allez sur [Netlify](https://netlify.com)
+   - Connectez-vous avec GitHub
+   - Cliquez sur **"New site from Git"**
+   - Choisissez votre dépôt `invitation_qr`
+
+2. **Configuration build** :
+   - Base directory : `frontend`
+   - Build command : `npm install && npm run build`
+   - Publish directory : `frontend/build`
+
+3. **Variables d'environnement** :
+   - Dans les paramètres du site, allez dans **Environment variables**
+   - Ajoutez :
+   ```
+   REACT_APP_API_URL = https://votre-backend.up.railway.app/api
+   REACT_APP_ENVIRONMENT = production
+   ```
+
+4. **Déploiement** :
+   - Le build se lance automatiquement
+   - Vous obtiendrez une URL : `https://random-name.netlify.app`
+   - Vous pouvez changer le nom dans les paramètres
+
+### Mise à jour CORS
+
+N'oubliez pas de mettre à jour la variable `CORS_ORIGIN` sur Railway avec votre URL Netlify finale !
+
+---
+
+## 4. 🔧 Configuration finale
+
+### Génération des secrets sécurisés
+
+Utilisez ces commandes pour générer des secrets forts :
+
+```bash
+# JWT_SECRET (32 caractères minimum)
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+
+# QR_SECRET_KEY (32 caractères minimum)  
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+### Test du déploiement
+
+1. **Backend** : `https://votre-backend.up.railway.app/api/health`
+2. **Frontend** : `https://votre-app.netlify.app`
+3. **Fonctionnalités** :
+   - Création d'événement
+   - Ajout d'invités
+   - Génération QR codes
+   - Scanner fonctionnel
+
+---
+
+## 5. 🚀 Déploiement automatique
+
+### GitHub Actions (optionnel)
+
+Les deux plateformes se déploient automatiquement à chaque push sur `main` :
+- **Railway** : Redéploie le backend automatiquement
+- **Netlify** : Rebuild le frontend automatiquement
+
+### Branches de déploiement
+
+- `main` → Production (Railway + Netlify)
+- `develop` → Vous pouvez créer des environnements de staging
+
+---
+
+## 6. 💡 Conseils production
+
+### Monitoring
+- **Railway** : Logs intégrés, métriques de performance
+- **MongoDB Atlas** : Monitoring de base gratuit
+- **Netlify** : Analytics de site intégrés
+
+### Sauvegardes
+- **MongoDB Atlas** : Sauvegardes automatiques (M0 limitées)
+- **Code** : GitHub comme source de vérité
+
+### Sécurité
+- Secrets jamais dans le code
+- CORS configuré strictement
+- Rate limiting activé
+- Validation des données côté serveur
+
+### Performance
+- Build optimisé React (déjà configuré)
+- Compression gzip (automatique sur Netlify)
+- CDN global (Netlify)
+
+---
+
+## 🆘 Dépannage
+
+### Erreurs courantes
+
+1. **Erreur CORS** : Vérifiez `CORS_ORIGIN` sur Railway
+2. **Base de données** : Vérifiez l'URI MongoDB et les autorisations IP
+3. **Build frontend** : Vérifiez `REACT_APP_API_URL`
+4. **Routes 404** : Vérifiez le fichier `_redirects`
+
+### Logs utiles
+
+- **Railway** : Dashboard → Deploy logs
+- **Netlify** : Dashboard → Deploy logs  
+- **MongoDB** : Atlas → Monitoring
+
+---
+
+## 📞 Support
+
+- **Railway** : [Documentation](https://docs.railway.app)
+- **Netlify** : [Documentation](https://docs.netlify.com)
+- **MongoDB Atlas** : [Documentation](https://docs.atlas.mongodb.com)
 
 ### 2. Configuration réseau et sécurité
 
