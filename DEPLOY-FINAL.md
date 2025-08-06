@@ -19,7 +19,7 @@ CORS_ORIGIN=https://votre-app.netlify.app
 
 ### 🌐 NETLIFY (Frontend React)
 ```
-REACT_APP_API_URL=https://votre-backend.up.railway.app/api
+REACT_APP_API_URL=https://invitation-qr.up.railway.app/api
 REACT_APP_ENVIRONMENT=production
 ```
 
@@ -53,7 +53,7 @@ REACT_APP_ENVIRONMENT=production
 4. **Testez votre application** ! 🎉
 
 ## 🔍 URLs de test final
-- **API Backend** : `https://votre-backend.up.railway.app/api/health`
+- **API Backend** : `https://invitation-qr.up.railway.app/api/health`
 - **Application** : `https://votre-app.netlify.app`
 
 ## 📱 Fonctionnalités à tester
